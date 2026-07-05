@@ -1,6 +1,6 @@
 # Arc 4 - FastAPI Backend
-# Changing from Arc 3 agent to HTTP Server
-# If we send any message to /chat, agent responds at anytime
+# We are turning our Arc 3 terminal agent into an HTTP server
+# Now anyone can send a message to /chat endpoint and get a response
 
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -8,174 +8,100 @@ from openai import OpenAI
 import os
 import json
 from dotenv import load_dotenv
+import sys
 
-load_dotenv(r"c:\Users\yende\Projects\Food Agent\.env")
+# This tells Python where to find our arc3 tools
+sys.path.append(r"c:\Users\yende\Projects\AI Food Ordering Agent\arc3")
 
+# Import tools and definitions from arc3
+from tools import search_meals, place_order, TOOL_DEFINITIONS
+
+# Load API key from .env file
+load_dotenv(r"c:\Users\yende\Projects\AI Food Ordering Agent\.env")
+
+# Connect to Groq
 llm = OpenAI(
     base_url="https://api.groq.com/openai/v1",
     api_key=os.getenv("OPENROUTER_API_KEY")
 )
 
+# Create the FastAPI app - this is our server
 app = FastAPI()
 
-RESTAURANTS = [
-    {
-        "id": 1,
-        "name": "FitBite",
-        "dish": "Grilled Chicken Bowl",
-        "description": "Tender grilled chicken with quinoa, broccoli and tahini sauce",
-        "protein_g": 42,
-        "calories": 480,
-        "price": 249,
-        "rating": 4.5,
-        "eta_min": 25,
-        "cuisine": "Healthy",
-        "tags": ["high-protein", "gluten-free"],
-    },
-    {
-        "id": 2,
-        "name": "NutriBowl",
-        "dish": "Paneer Tikka Wrap",
-        "description": "Marinated paneer tikka in a whole-wheat wrap with mint chutney",
-        "protein_g": 28,
-        "calories": 420,
-        "price": 199,
-        "rating": 4.2,
-        "eta_min": 20,
-        "cuisine": "Indian",
-        "tags": ["vegetarian", "high-protein"],
-    },
-    {
-        "id": 3,
-        "name": "HealthyGrill",
-        "dish": "Egg White Scramble Plate",
-        "description": "6-egg white scramble with sautéed mushrooms, spinach and multigrain toast",
-        "protein_g": 35,
-        "calories": 320,
-        "price": 179,
-        "rating": 4.0,
-        "eta_min": 15,
-        "cuisine": "Continental",
-        "tags": ["high-protein", "low-fat"],
-    },
-    {
-        "id": 4,
-        "name": "SpiceBox",
-        "dish": "Dal Makhani + Rice",
-        "description": "Slow-cooked black lentils in a rich tomato base, served with steamed rice",
-        "protein_g": 18,
-        "calories": 550,
-        "price": 149,
-        "rating": 4.3,
-        "eta_min": 30,
-        "cuisine": "Indian",
-        "tags": ["vegetarian", "comfort-food"],
-    },
-    {
-        "id": 5,
-        "name": "GreenLeaf",
-        "dish": "Quinoa Protein Salad",
-        "description": "Quinoa, chickpeas, cucumber, cherry tomatoes with lemon-herb dressing",
-        "protein_g": 22,
-        "calories": 380,
-        "price": 279,
-        "rating": 4.6,
-        "eta_min": 35,
-        "cuisine": "Healthy",
-        "tags": ["vegan", "high-protein"],
-    },
-]
+# System prompt - tells LLM how to behave
+# This is sent at the start of every new conversation
+SYSTEM_PROMPT = """You are a smart food assistant — like Zomato, but powered by AI.
+Help users find and order meals that match their nutritional and budget goals.
+You have two tools:
+  - search_meals : find meals that match protein/price/cuisine/diet constraints
+  - place_order  : place an order once the user has chosen a meal
+When listing meal options, use this format:
+  🍽️ **Dish Name** — Restaurant Name
+     Protein: Xg | Price: ₹X | ETA: X min | ⭐ rating
+     Short description
+IMPORTANT RULES — never break these:
+  - After calling place_order, relay the EXACT restaurant name, dish name, ETA, and price
+    from the tool result. Never invent or guess these values.
+  - The ETA and restaurant name in your confirmation MUST match what the tool returned.
+  - Never make up order details that differ from the tool response.
+  - When calling place_order, quantity must always be an integer like 1, 2, 3 — never a string.
+Always use ₹ for prices. Be friendly and concise."""
 
-def get_menu():
-    menu_text = ""
-    for r in RESTAURANTS:
-        menu_text += f"{r['dish']} by {r['name']} - ₹{r['price']} | {r['protein_g']}g protein | {r['calories']} cal | Rating: {r['rating']} | ETA: {r['eta_min']} mins\n"
-    return menu_text
-
-def get_best_value_meal():
-    best = max(RESTAURANTS, key=lambda x: x["protein_g"] / x["price"])
-    return f"Best value: {best['dish']} by {best['name']} - ₹{best['price']} | {best['protein_g']}g protein | ETA: {best['eta_min']} mins"
-
-def place_order(dish: str, quantity: int):
-    for r in RESTAURANTS:
-        if r["dish"].lower() == dish.lower():
-            total = r["price"] * quantity
-            return f"{quantity}x {r['dish']} from {r['name']} ordered! Total: ₹{total} | ETA: {r['eta_min']} mins"
-    return f"{dish} is not available in the menu"
-
-tools = [
-    {
-        "type": "function",
-        "function": {
-            "name": "get_menu",
-            "description": "Get the food menu with items and prices",
-            "parameters": {"type": "object", "properties": {}, "required": []}
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "get_best_value_meal",
-            "description": "Get the lowest price and highest protein meal recommendation",
-            "parameters": {"type": "object", "properties": {}, "required": []}
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "place_order",
-            "description": "Place an order for a food item",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "dish": {"type": "string", "description": "Food dish name"},
-                    "quantity": {"type": "integer", "description": "Number of items"}
-                },
-                "required": ["dish", "quantity"]
-            }
-        }
-    }
-]
-
+# This defines what the user must send in their request
+# message - the new message from user
+# messages - the full conversation history (empty by default)
 class ChatRequest(BaseModel):
     message: str
-    messages: list = [] 
+    messages: list = []
 
+# This is our main API route
+# When anyone sends POST request to /chat, this function runs
 @app.post("/chat")
 def chat(request: ChatRequest):
     messages = request.messages
+
+    # If no history, start fresh with system prompt
+    if not messages:
+        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+
+    # Add the new user message to history
     messages.append({"role": "user", "content": request.message})
 
+    # Keep looping until LLM gives a final answer (no more tool calls)
     while True:
         response = llm.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=messages,
-            tools=tools
+            tools=TOOL_DEFINITIONS
         )
 
         ai_message = response.choices[0].message
 
         if ai_message.tool_calls:
+            # LLM wants to call a tool
             messages.append(ai_message)
 
             for tool_call in ai_message.tool_calls:
                 tool_name = tool_call.function.name
                 tool_args = json.loads(tool_call.function.arguments)
 
-                if tool_name == "get_menu":
-                    result = get_menu()
-                elif tool_name == "get_best_value_meal":
-                    result = get_best_value_meal()
+                # Run the correct tool based on LLM's request
+                if tool_name == "search_meals":
+                    result = search_meals(**tool_args)
                 elif tool_name == "place_order":
                     result = place_order(**tool_args)
+                else:
+                    result = "Unknown tool"
 
+                # Send tool result back to LLM
                 messages.append({
                     "role": "tool",
                     "tool_call_id": tool_call.id,
                     "content": str(result)
                 })
         else:
+            # LLM gave final answer - return it to the user
             return {
                 "reply": ai_message.content,
-                "messages": messages  
+                "messages": messages
             }
