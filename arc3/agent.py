@@ -1,4 +1,4 @@
-# agent.py
+# Arc 3 - agent loop & system prompt
 # Main agent loop - connects LLM with tools
 
 from openai import OpenAI
