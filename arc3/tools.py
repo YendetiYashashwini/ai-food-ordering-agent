@@ -1,4 +1,4 @@
-# tools.py
+# Arc 3 - tools
 # All functions that the LLM can call as tools
 
 from data import RESTAURANTS
