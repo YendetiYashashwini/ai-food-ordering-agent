@@ -6,7 +6,7 @@ import os
 from dotenv import load_dotenv
 
 # Load API key from .env file
-load_dotenv(r"c:\Users\yende\Projects\Food Agent\.env")
+load_dotenv(r"c:\Users\yende\Projects\AI Food Ordering Agent\.env")
 
 # Connect to Groq
 llm = OpenAI(
