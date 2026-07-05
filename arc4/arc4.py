@@ -44,6 +44,7 @@ IMPORTANT RULES — never break these:
     from the tool result. Never invent or guess these values.
   - The ETA and restaurant name in your confirmation MUST match what the tool returned.
   - Never make up order details that differ from the tool response.
+  - When calling search_meals, always use valid JSON format for arguments.
   - When calling place_order, quantity must always be an integer like 1, 2, 3 — never a string.
 Always use ₹ for prices. Be friendly and concise."""
 
@@ -58,13 +59,18 @@ class ChatRequest(BaseModel):
 # When anyone sends POST request to /chat, this function runs
 @app.post("/chat")
 def chat(request: ChatRequest):
-    messages = request.messages
-
-    # If no history, start fresh with system prompt
-    if not messages:
-        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-
-    # Add the new user message to history
+    messages = []
+    
+    # Start with system prompt always
+    messages.append({"role": "system", "content": SYSTEM_PROMPT})
+    
+    # Add only user/assistant messages from history (skip system/tool messages)
+    for msg in request.messages:
+        if isinstance(msg, dict) and msg.get("role") in ["user", "assistant"]:
+            if isinstance(msg.get("content"), str):
+                messages.append({"role": msg["role"], "content": msg["content"]})
+    
+    # Add new user message
     messages.append({"role": "user", "content": request.message})
 
     # Keep looping until LLM gives a final answer (no more tool calls)
