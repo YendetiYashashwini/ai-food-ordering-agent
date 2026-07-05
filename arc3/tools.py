@@ -9,7 +9,9 @@ def search_meals(
     cuisine: str = None,
     diet: str = None
 ):
-    # Filter restaurants based on user constraints
+    if max_price: max_price = int(max_price)
+    if min_protein: min_protein = int(min_protein)
+
     results = RESTAURANTS
 
     if max_price:
@@ -22,9 +24,8 @@ def search_meals(
         results = [r for r in results if diet.lower() in [t.lower() for t in r["tags"]]]
 
     if not results:
-        return "No meals found matching your criteria."
+        return "No meals found. Try relaxing your filters."
 
-    # Format output
     output = ""
     for r in results:
         output += (
@@ -40,12 +41,12 @@ def place_order(dish: str, quantity: int):
         if r["dish"].lower() == dish.lower():
             total = r["price"] * quantity
             return (
-                f"\n🍽️ Order Confirmed!\n"
+                f"\n🍽️  Order Confirmed!\n"
                 f"━━━━━━━━━━━━━━━━━━━━\n"
                 f"📦 {quantity}x {r['dish']}\n"
                 f"🏪 Restaurant: {r['name']}\n"
                 f"💰 Total: ₹{total}\n"
-                f"⏱️ ETA: {r['eta_min']} mins\n"
+                f"⏱️  ETA: {r['eta_min']} mins\n"
                 f"━━━━━━━━━━━━━━━━━━━━\n"
             )
     return f"❌ {dish} is not available in the menu"
