@@ -37,6 +37,7 @@ def search_meals(
     return output
 
 def place_order(dish: str, quantity: int):
+    quantity = int(quantity)
     for r in RESTAURANTS:
         if r["dish"].lower() == dish.lower():
             total = r["price"] * quantity
@@ -80,7 +81,7 @@ TOOL_DEFINITIONS = [
                 "type": "object",
                 "properties": {
                     "dish": {"type": "string", "description": "Exact dish name"},
-                    "quantity": {"type": "integer", "description": "Number of items"}
+                    "quantity": {"type": "integer", "description": "Number of items to order, must be a whole number"}
                 },
                 "required": ["dish", "quantity"]
             }

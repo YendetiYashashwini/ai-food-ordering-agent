@@ -1,4 +1,4 @@
-# Arc 3 - agent loop & system prompt
+# Arc 3 - main agent loop & system prompt
 # Main agent loop - connects LLM with tools
 
 from openai import OpenAI
@@ -31,6 +31,7 @@ IMPORTANT RULES — never break these:
     from the tool result. Never invent or guess these values.
   - The ETA and restaurant name in your confirmation MUST match what the tool returned.
   - Never make up order details that differ from the tool response.
+  - When calling place_order, quantity must always be an integer like 1, 2, 3 — never a string.
 Always use ₹ for prices. Be friendly and concise."""
 
 # Conversation history - starts with system prompt
@@ -38,7 +39,7 @@ messages = [
     {"role": "system", "content": SYSTEM_PROMPT}
 ]
 
-print("🍔 AI Food Ordering Agent — Type 'quit' to exit\n")
+print("\n🍔 AI Food Ordering Agent — Type 'quit' to exit\n")
 
 while True:
     human_input = input("You: ")
