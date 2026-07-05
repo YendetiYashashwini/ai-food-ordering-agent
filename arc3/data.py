@@ -1,3 +1,4 @@
+# Arc 3 - Static data
 # All restaurant data stored here
 
 RESTAURANTS = [
