@@ -160,7 +160,7 @@ Mentors: **Nikith Sir**
 
 **Yashashwini Yendeti** — 3rd Year CSE (AI & ML), VVITU
 
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=flat&logo=linkedin)](https://www.linkedin.com/in/yashashwini-yendeti)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=flat&logo=linkedin)](https://www.linkedin.com/in/yashashwini-yendeti-32b305322/)
 
 ---
 
